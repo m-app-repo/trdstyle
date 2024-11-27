@@ -15,7 +15,7 @@ python -m venv trading_env
 
 :: Activate the virtual environment
 echo Activating virtual environment...
- 
+call trading_env\Scripts\activate.bat
 
 :: Upgrade pip to the latest version
 echo Upgrading pip...
@@ -27,10 +27,10 @@ pip install PySide6
 pip install breeze-connect
 pip install pandas
 pip install dask
-pip install dask[dataframe]
+pip install "dask[dataframe]"
 
 :: Deactivate virtual environment and finish
-echo Virtual environment setup complete. You can now activate it using "trading_env\Scripts\activate".
+echo Virtual environment setup complete. You can now activate it using "trading_env\Scripts\activate.bat".
 echo To run the application, activate the virtual environment and then execute "python your_script.py".
 deactivate
 
