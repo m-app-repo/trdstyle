@@ -1,51 +1,47 @@
-# ui_components.py
-from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QLineEdit, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton
 
-from credentials_section import create_credentials_section
-from place_order_section import create_place_order_section
-from positions_table import create_positions_table
+def create_credentials_section(window):
+    # Create layout and input fields for API credentials
+    layout = QVBoxLayout()
+    api_key_label = QLabel("API Key")
+    api_key_input = QLineEdit()
+    api_secret_label = QLabel("API Secret")
+    api_secret_input = QLineEdit()
+    session_token_label = QLabel("Session Token")
+    session_token_input = QLineEdit()
 
-class MainUI(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    # Add widgets to the layout
+    layout.addWidget(api_key_label)
+    layout.addWidget(api_key_input)
+    layout.addWidget(api_secret_label)
+    layout.addWidget(api_secret_input)
+    layout.addWidget(session_token_label)
+    layout.addWidget(session_token_input)
 
-        # Main layout
-        main_layout = QVBoxLayout()
+    # Add login button
+    login_button = QPushButton("Login")
+    login_button.clicked.connect(lambda: window.login())
+    layout.addWidget(login_button)
 
-        # Create and add credentials section
-        credentials_layout, credentials_inputs = create_credentials_section(self)
-        main_layout.addLayout(credentials_layout)
+    # Store inputs in a dictionary for easy access
+    api_inputs = {
+        'api_key': api_key_input,
+        'api_secret': api_secret_input,
+        'session_token': session_token_input
+    }
 
-        # Create and add place order section
-        place_order_section, order_inputs = create_place_order_section(self)
-        main_layout.addLayout(place_order_section)
+    return layout, api_inputs
 
-        # Create and add positions table
-        positions_table, refresh_button = create_positions_table(self)
-        main_layout.addWidget(positions_table)
-        main_layout.addWidget(refresh_button)
+def create_positions_table(window):
+    from PySide6.QtWidgets import QTableWidget, QPushButton
 
-        # Set main layout
-        self.setLayout(main_layout)
+    # Create positions table and refresh button
+    positions_table = QTableWidget()
+    refresh_button = QPushButton("Refresh Positions")
+    refresh_button.clicked.connect(lambda: window.refresh_positions())
 
-        # Reference to input fields
-        self.credentials_inputs = credentials_inputs
-        self.order_inputs = order_inputs
+    return positions_table, refresh_button
 
-    def login(self):
-        # Handle login logic using self.credentials_inputs
-        print("Login logic here")
-
-    def place_order(self):
-        # Handle placing an order using self.order_inputs
-        print("Place order logic here")
-
-    def update_selection_display(self, source_widget, target_widget):
-        # Updates the selection display logic
-        selected_items = source_widget.selectedItems()
-        if selected_items:
-            target_widget.setText(selected_items[0].text())
-
-    def refresh_positions(self):
-        # Refresh logic for positions table
-        print("Refresh positions logic here")
+def create_place_order_section(window):
+    from place_order_section import create_place_order_section
+    return create_place_order_section(window)

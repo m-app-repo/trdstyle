@@ -1,20 +1,24 @@
-def handle_radio_toggle(checked, value, window):
-    """
-    Handles the toggling of both Call/Put and Buy/Sell radio buttons.
-    
-    Parameters:
-        checked (bool): Whether the radio button was toggled on or off.
-        value (str): The value associated with the radio button ('call', 'put', 'buy', or 'sell').
-        window: The main window or the class instance that contains order_inputs.
-    """
-    if not checked:
-        return
+from PySide6.QtCore import Qt
 
-    if value in ['call', 'put']:
-        window.order_inputs['right'] = value
-        print(f"Right Option Selected: {value}")
+class HandleRadioToggle:
+    def __init__(self, logger, order_inputs, log_book):
+        self.logger = logger
+        self.order_inputs = order_inputs
+        self.log_book = log_book
 
-    if value in ['buy', 'sell']:
-        window.order_inputs['action'] = value
-        print(f"Action Selected: {value}")
-    window.auto_populate_price()
+    def handle_radio_toggle(self, checked, toggle_type, window):
+        """Handles the radio button toggles for call/put or buy/sell."""
+        if checked:
+            # Update the order_inputs dictionary with the selected value
+            if toggle_type == 'call':
+                self.order_inputs['right'] = 'call'
+            elif toggle_type == 'put':
+                self.order_inputs['right'] = 'put'
+            elif toggle_type == 'buy':
+                self.order_inputs['action'] = 'buy'
+            elif toggle_type == 'sell':
+                self.order_inputs['action'] = 'sell'
+
+            # Call the auto_populate_price method to update the price
+            window.auto_populate_price()
+

@@ -1,26 +1,20 @@
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QDateEdit, QGridLayout, QGroupBox, QListWidget, QRadioButton
 from PySide6.QtCore import Qt
-from handle_radio_toggle import handle_radio_toggle
-
-
+from handle_radio_toggle import HandleRadioToggle
 
 def create_place_order_section(window):
     # Grid Layout 1: Exchange Type, Product Type
     grid_layout1 = QGridLayout()
     exchange_code_label = QLabel("Exchange Type")
-    exchange_code_input = QLineEdit("NFO")  # Default value
+    exchange_code_input = QComboBox()
+    exchange_code_input.addItems(["NFO", "BFO"])  # Default value NFO, user can select BFO
     product_label = QLabel("Product Type")
     product_input = QLineEdit("options")  # Default value
     product_input.setEnabled(False)  # Make it read-only
-    exchange_code_input.setEnabled(False)  # Make it read-only
     grid_layout1.addWidget(exchange_code_label, 0, 0)
     grid_layout1.addWidget(exchange_code_input, 0, 1)
     grid_layout1.addWidget(product_label, 0, 2)
     grid_layout1.addWidget(product_input, 0, 3)
-    grid_layout1.setColumnStretch(0, 0)
-    grid_layout1.setColumnStretch(1, 0)
-    grid_layout1.setColumnStretch(2, 0)
-    grid_layout1.setColumnStretch(3, 0)
     grid_layout1.setColumnStretch(4, 1)
 
     # Grid Layout 2: Stock Code, Lot Size, Expiry Date, Strike Price
@@ -31,10 +25,10 @@ def create_place_order_section(window):
     lot_size_input = QLineEdit()
     quantity_input = QLineEdit()
     strike_price_input = QListWidget()
-    group_box = QGroupBox("Select Derivative")  # Optional: Set a title for the group
+    group_box = QGroupBox("Select Derivative")
     group_box.setLayout(query_layout)
 
-    group_trx_box = QGroupBox("Transact Derivative")  # Optional: Set a title for the group
+    group_trx_box = QGroupBox("Transact Derivative")
     group_trx_box.setLayout(trx_layout)
 
     # Right Field as Radio Buttons in a Group Box
@@ -45,7 +39,7 @@ def create_place_order_section(window):
     right_layout.addWidget(call_radio)
     right_layout.addWidget(put_radio)
     right_group.setLayout(right_layout)
-    right_group.setMaximumWidth(150)  # Set maximum width to reduce the size
+    right_group.setMaximumWidth(150)
 
     # Action Field as Radio Buttons in a Group Box
     action_group = QGroupBox("Action")
@@ -57,60 +51,38 @@ def create_place_order_section(window):
     action_layout.addWidget(buy_radio)
     action_layout.addWidget(sell_radio)
     action_group.setLayout(action_layout)
-    action_group.setMaximumWidth(150)  # Set maximum width to reduce the size
+    action_group.setMaximumWidth(150)
 
     query_layout.addWidget(QLabel("Stock Code"), 0, 0, Qt.AlignmentFlag.AlignTop)
     query_layout.addWidget(stock_code_input, 0, 1, Qt.AlignmentFlag.AlignTop)
     query_layout.addWidget(QLabel("Lot Size"), 0, 2, Qt.AlignmentFlag.AlignTop)
-    lot_size_input.setEnabled(False)  # Read-only
+    lot_size_input.setEnabled(False)
     query_layout.addWidget(lot_size_input, 0, 3, Qt.AlignmentFlag.AlignTop)
-    
+
     query_layout.addWidget(QLabel("Expiry Date"), 0, 4)
-    expiry_date_input.setFixedWidth(100)  # Default height, adjust as needed
-    if expiry_date_input.count() > 0:
-        item_height = expiry_date_input.sizeHintForRow(0)  # Safe to use sizeHintForRow(0) as it should exist
-        expiry_date_input.setFixedHeight(item_height * 5 + 2 * expiry_date_input.frameWidth())  # Set the desired height
-    else:
-        expiry_date_input.setFixedHeight(100)  # Default height, adjust as needed
-    expiry_date_input.setStyleSheet("""
-        QListWidget::item:selected {
-            background-color: #ffcc00;  /* Yellow background for selected item */
-            color: black;  /* Black text for selected item */
-        }
-    """)
+    expiry_date_input.setFixedWidth(100)
+    expiry_date_input.setFixedHeight(100)
     selected_expiry_date = QLineEdit()
-    selected_expiry_date.setReadOnly(True)  # Make it read-only
+    selected_expiry_date.setReadOnly(True)
     query_layout.addWidget(expiry_date_input, 0, 5)
     query_layout.addWidget(selected_expiry_date, 1, 5)
-    expiry_date_input.itemSelectionChanged.connect(lambda: window.update_selection_display(expiry_date_input, selected_expiry_date))
- 
+    expiry_date_input.itemSelectionChanged.connect(lambda: window.stock_operations.update_selection_display(expiry_date_input, selected_expiry_date))
+
     query_layout.addWidget(QLabel("Strike Price"), 0, 6)
     strike_price_input.setFixedWidth(100)
-    if strike_price_input.count() > 0:
-        item_height = strike_price_input.sizeHintForRow(0)
-        strike_price_input.setFixedHeight(item_height * 5 + 2 * expiry_date_input.frameWidth())
-    else:
-        strike_price_input.setFixedHeight(100)
-    strike_price_input.setStyleSheet("""
-        QListWidget::item:selected {
-            background-color: #ffcc00;
-            color: black;
-        }
-    """)  
-    
+    strike_price_input.setFixedHeight(100)
     selected_strike_price = QLineEdit()
     selected_strike_price.setReadOnly(True)
     query_layout.addWidget(strike_price_input, 0, 7)
     query_layout.addWidget(selected_strike_price, 1, 7)
-    strike_price_input.itemSelectionChanged.connect(lambda: window.update_selection_display(strike_price_input, selected_strike_price))
-    
+    strike_price_input.itemSelectionChanged.connect(lambda: window.stock_operations.update_selection_display(strike_price_input, selected_strike_price))
+
     query_layout.addWidget(right_group, 1, 0)
     query_layout.addWidget(action_group, 1, 1)
     query_layout.addWidget(QLabel("Spot Price"), 1, 2)
     query_layout.addWidget(spot_price, 1, 3)
-  
+
     # Grid Layout 3: Order Type, Price, StopLoss, Validity, Validity Date, Disclosed Quantity
-    
     order_type_input = QComboBox()
     order_type_input.addItems(["Market", "Limit"])
 
@@ -136,13 +108,13 @@ def create_place_order_section(window):
     trx_layout.addWidget(validity_date_input, 1, 3)
     trx_layout.addWidget(QLabel("Disclosed Quantity"), 1, 4)
     trx_layout.addWidget(disclosed_quantity_input, 1, 5)
-    trx_layout.setRowMinimumHeight = 25
 
-    call_radio.toggled.connect(lambda checked: handle_radio_toggle(checked, 'call', window) if checked else None)
-    put_radio.toggled.connect(lambda checked: handle_radio_toggle(checked, 'put', window) if checked else None)
+    handle_radio_toggle = HandleRadioToggle(window.logger, window.order_inputs, window.log_book)
+    call_radio.toggled.connect(lambda checked: handle_radio_toggle.handle_radio_toggle(checked, 'call', window) if checked else None)
+    put_radio.toggled.connect(lambda checked: handle_radio_toggle.handle_radio_toggle(checked, 'put', window) if checked else None)
 
-    buy_radio.toggled.connect(lambda checked: handle_radio_toggle(checked, 'buy', window) if checked else None)
-    sell_radio.toggled.connect(lambda checked: handle_radio_toggle(checked, 'sell', window) if checked else None)
+    buy_radio.toggled.connect(lambda checked: handle_radio_toggle.handle_radio_toggle(checked, 'buy', window) if checked else None)
+    sell_radio.toggled.connect(lambda checked: handle_radio_toggle.handle_radio_toggle(checked, 'sell', window) if checked else None)
     place_order_button = QPushButton("Place Order")
     place_order_button.clicked.connect(lambda: window.place_order())
 
@@ -151,7 +123,7 @@ def create_place_order_section(window):
     place_order_section.addWidget(group_box)
     place_order_section.addWidget(group_trx_box)
     place_order_section.addWidget(place_order_button)
-   
+
     order_inputs = {
         'exchange_code': exchange_code_input,
         'product': product_input,
@@ -168,7 +140,12 @@ def create_place_order_section(window):
         'stoploss': stoploss_input,
         'validity': validity_input,
         'validity_date': validity_date_input,
-        'disclosed_quantity': disclosed_quantity_input
+        'disclosed_quantity': disclosed_quantity_input,
+        # Add radio buttons to order_inputs for easier access
+        'call_radio': call_radio,
+        'put_radio': put_radio,
+        'buy_radio': buy_radio,
+        'sell_radio': sell_radio
     }
-    
+
     return place_order_section, order_inputs
