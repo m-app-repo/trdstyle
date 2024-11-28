@@ -17,6 +17,17 @@ def create_place_order_section(window):
     grid_layout1.addWidget(product_input, 0, 3)
     grid_layout1.setColumnStretch(4, 1)
 
+    # Toggle Group: Index or Stock
+    instrument_group = QGroupBox("Select Instrument Type")
+    instrument_layout = QHBoxLayout()
+    index_radio = QRadioButton("Index")
+    stock_radio = QRadioButton("Stock")
+    stock_radio.setChecked(True)  # Set default selection to Stock
+    instrument_layout.addWidget(index_radio)
+    instrument_layout.addWidget(stock_radio)
+    instrument_group.setLayout(instrument_layout)
+    instrument_group.setMaximumWidth(200)
+
     # Grid Layout 2: Stock Code, Lot Size, Expiry Date, Strike Price
     query_layout = QGridLayout()
     trx_layout = QGridLayout()
@@ -53,34 +64,36 @@ def create_place_order_section(window):
     action_group.setLayout(action_layout)
     action_group.setMaximumWidth(150)
 
-    query_layout.addWidget(QLabel("Stock Code"), 0, 0, Qt.AlignmentFlag.AlignTop)
-    query_layout.addWidget(stock_code_input, 0, 1, Qt.AlignmentFlag.AlignTop)
-    query_layout.addWidget(QLabel("Lot Size"), 0, 2, Qt.AlignmentFlag.AlignTop)
+    # Add widgets to the query layout
+    query_layout.addWidget(instrument_group, 0, 0, 1, 2)  # Add instrument group box to the layout
+    query_layout.addWidget(QLabel("Stock Code"), 1, 0, Qt.AlignmentFlag.AlignTop)
+    query_layout.addWidget(stock_code_input, 1, 1, Qt.AlignmentFlag.AlignTop)
+    query_layout.addWidget(QLabel("Lot Size"), 1, 2, Qt.AlignmentFlag.AlignTop)
     lot_size_input.setEnabled(False)
-    query_layout.addWidget(lot_size_input, 0, 3, Qt.AlignmentFlag.AlignTop)
+    query_layout.addWidget(lot_size_input, 1, 3, Qt.AlignmentFlag.AlignTop)
 
-    query_layout.addWidget(QLabel("Expiry Date"), 0, 4)
+    query_layout.addWidget(QLabel("Expiry Date"), 1, 4)
     expiry_date_input.setFixedWidth(100)
     expiry_date_input.setFixedHeight(100)
     selected_expiry_date = QLineEdit()
     selected_expiry_date.setReadOnly(True)
-    query_layout.addWidget(expiry_date_input, 0, 5)
-    query_layout.addWidget(selected_expiry_date, 1, 5)
+    query_layout.addWidget(expiry_date_input, 1, 5)
+    query_layout.addWidget(selected_expiry_date, 2, 5)
     expiry_date_input.itemSelectionChanged.connect(lambda: window.stock_operations.update_selection_display(expiry_date_input, selected_expiry_date))
 
-    query_layout.addWidget(QLabel("Strike Price"), 0, 6)
+    query_layout.addWidget(QLabel("Strike Price"), 1, 6)
     strike_price_input.setFixedWidth(100)
     strike_price_input.setFixedHeight(100)
     selected_strike_price = QLineEdit()
     selected_strike_price.setReadOnly(True)
-    query_layout.addWidget(strike_price_input, 0, 7)
-    query_layout.addWidget(selected_strike_price, 1, 7)
+    query_layout.addWidget(strike_price_input, 1, 7)
+    query_layout.addWidget(selected_strike_price, 2, 7)
     strike_price_input.itemSelectionChanged.connect(lambda: window.stock_operations.update_selection_display(strike_price_input, selected_strike_price))
 
-    query_layout.addWidget(right_group, 1, 0)
-    query_layout.addWidget(action_group, 1, 1)
-    query_layout.addWidget(QLabel("Spot Price"), 1, 2)
-    query_layout.addWidget(spot_price, 1, 3)
+    query_layout.addWidget(right_group, 2, 0)
+    query_layout.addWidget(action_group, 2, 1)
+    query_layout.addWidget(QLabel("Spot Price"), 2, 2)
+    query_layout.addWidget(spot_price, 2, 3)
 
     # Grid Layout 3: Order Type, Price, StopLoss, Validity, Validity Date, Disclosed Quantity
     order_type_input = QComboBox()
@@ -118,12 +131,17 @@ def create_place_order_section(window):
     place_order_button = QPushButton("Place Order")
     place_order_button.clicked.connect(lambda: window.place_order())
 
+    # Connect index and stock radio buttons to the filter function
+    index_radio.toggled.connect(lambda checked: window.update_stock_codes('Index') if checked else None)
+    stock_radio.toggled.connect(lambda checked: window.update_stock_codes('Stock') if checked else None)
+
     place_order_section = QVBoxLayout()
     place_order_section.addLayout(grid_layout1)
     place_order_section.addWidget(group_box)
     place_order_section.addWidget(group_trx_box)
     place_order_section.addWidget(place_order_button)
 
+    # Update order_inputs to include radio buttons
     order_inputs = {
         'exchange_code': exchange_code_input,
         'product': product_input,
@@ -141,7 +159,6 @@ def create_place_order_section(window):
         'validity': validity_input,
         'validity_date': validity_date_input,
         'disclosed_quantity': disclosed_quantity_input,
-        # Add radio buttons to order_inputs for easier access
         'call_radio': call_radio,
         'put_radio': put_radio,
         'buy_radio': buy_radio,

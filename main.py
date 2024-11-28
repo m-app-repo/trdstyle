@@ -1,15 +1,19 @@
 import sys
 import pandas as pd
-from PySide6.QtWidgets import QApplication, QTextEdit, QVBoxLayout, QWidget, QLineEdit, QComboBox, QDateEdit, QListWidget,QRadioButton
-from ui_components import create_credentials_section, create_positions_table, create_place_order_section
+from configparser import ConfigParser
+from cryptography.fernet import Fernet
+from PySide6.QtWidgets import QApplication, QTextEdit, QVBoxLayout, QWidget, QLineEdit, QComboBox, QDateEdit, QListWidget, QRadioButton,QDialog
+from ui_components import create_positions_table, create_place_order_section
 from breeze_api import BreezeAPI
 from logger import Logger
 from stock_code_operations import StockCodeOperations
 from position_management import PositionManagement
 from order_operations import OrderOperations
+from encryption_utils import decrypt_data  # Use your encryption script's decrypt function
+from login_dialog import LoginDialog  # Import the new LoginDialog class
 
 class TradingPlatform(QWidget):
-    def __init__(self):
+    def __init__(self, api_key, api_secret, session_token):
         super().__init__()
 
         self.setWindowTitle("Trading Platform - v1.1")
@@ -18,6 +22,11 @@ class TradingPlatform(QWidget):
         # Initialize BreezeAPI and Logger
         self.logger = Logger()
         self.breeze_api = BreezeAPI(logger=self.logger)
+
+        # Perform login using the provided credentials
+        success = self.breeze_api.login(api_key, api_secret, session_token)
+        if not success:
+            raise Exception("Login Failed. Please check your credentials.")
 
         # Initialize empty order_inputs dictionary
         self.order_inputs = {}
@@ -39,10 +48,6 @@ class TradingPlatform(QWidget):
     def create_ui(self):
         # Main layout
         main_layout = QVBoxLayout()
-
-        # Credentials Section
-        self.credentials_section, self.api_inputs = create_credentials_section(self)
-        main_layout.addLayout(self.credentials_section)
 
         # Open Positions Section
         self.positions_table, self.refresh_button = create_positions_table(self)
@@ -71,8 +76,28 @@ class TradingPlatform(QWidget):
             return pd.DataFrame()
     
     def populate_stock_codes(self):
-        """Populates the stock_code combo box with unique exchangecode values."""
-        unique_stock_codes = self.csv_data["ShortName"].unique()
+        """Populates the stock_code combo box with unique exchange codes based on selected instrument type."""
+        if self.csv_data.empty:
+            print("CSV data is empty. Unable to populate stock codes.")
+            return
+
+        # Default to "Stock" to populate the initial dropdown
+        self.update_stock_codes('Stock')
+    
+    def update_stock_codes(self, instrument_type):
+        """Updates the stock_code dropdown based on the selected instrument type (Index or Stock)."""
+        if self.csv_data.empty:
+            return
+
+        if instrument_type == 'Index':
+            filtered_data = self.csv_data[self.csv_data['InstrumentName'] == 'OPTIDX']
+        elif instrument_type == 'Stock':
+            filtered_data = self.csv_data[self.csv_data['InstrumentName'] == 'OPTSTK']
+        else:
+            return
+
+        unique_stock_codes = filtered_data["ShortName"].unique()
+        self.order_inputs['stock_code'].clear()
         self.order_inputs['stock_code'].addItems(unique_stock_codes)
 
         # Connect stock_code selection to field population
@@ -84,12 +109,10 @@ class TradingPlatform(QWidget):
     
     def auto_populate_price(self):
         """Automatically populates the price based on selected inputs by fetching data from Breeze API."""
-        print("Auto-populate price function called.")
 
         # Prepare the request data for the API
         premium_data = {}
         for key, input_field in self.order_inputs.items():
-            print(f"Processing input: {key}, Type: {type(input_field)}")
             
             if isinstance(input_field, QLineEdit):
                 premium_data[key] = input_field.text()
@@ -106,10 +129,8 @@ class TradingPlatform(QWidget):
                     premium_data[key] = None  # If nothing is selected, assign None or a default value
             elif key == 'right':  # Handling the 'right' field using radio buttons
                 premium_data[key] = 'call' if self.order_inputs['call_radio'].isChecked() else 'put'
-                print(f"Radio Button for 'right' selected: {premium_data[key]}")
             elif key == 'action':  # Handling the 'action' field using radio buttons
                 premium_data[key] = 'buy' if self.order_inputs['buy_radio'].isChecked() else 'sell'
-                print(f"Radio Button for 'action' selected: {premium_data[key]}")
             elif isinstance(input_field, QRadioButton):
                 # Skip adding QRadioButton instances to premium_data
                 continue
@@ -117,7 +138,6 @@ class TradingPlatform(QWidget):
                 print(f"Unhandled input type: {key} -> {input_field}, Type: {type(input_field)}")
 
         # Create price request data
-        print("Collected premium data:", premium_data)
         price_request_data = {
             "stock_code": premium_data['stock_code'],
             "exchange_code": premium_data['exchange_code'],
@@ -161,32 +181,14 @@ class TradingPlatform(QWidget):
                 self.order_inputs['price'].setText("0.00")
                 error_message = quotes_response.get('Error', 'Unknown error') if quotes_response else 'No response'
                 self.log_activity("Error fetching price:", error_message)
-                print("Error fetching price:", error_message)
 
         except Exception as e:
             # Handle any unexpected exceptions during the API call
             self.order_inputs['price'].setText("0.00")
             self.log_activity("Error during price fetch", str(e))
-            print("Exception occurred during price fetch:", str(e))
-
-
     
     def log_activity(self, action, request=None, response=None):
         self.logger.log_activity(action, request, response, log_book=self.log_book)
-    
-    def login(self):
-        """Handles the login process."""
-        api_key = self.api_inputs['api_key'].text()
-        api_secret = self.api_inputs['api_secret'].text()
-        session_token = self.api_inputs['session_token'].text()
-
-        # Perform login via BreezeAPI
-        success = self.breeze_api.login(api_key, api_secret, session_token)
-
-        if success:
-            self.logger.log_activity(action="Login Successful", log_book=self.log_book)
-        else:
-            self.logger.log_activity(action="Login Failed", log_book=self.log_book)
     
     def refresh_positions(self):
         self.position_management.refresh_positions()
@@ -200,6 +202,26 @@ class TradingPlatform(QWidget):
 # Main entry point
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = TradingPlatform()
-    window.show()
-    sys.exit(app.exec())
+
+    # Create and display the login dialog to get passphrase and session token
+    login_dialog = LoginDialog()
+    if login_dialog.exec() == QDialog.Accepted:
+        # Retrieve credentials from login dialog
+        user_passphrase = login_dialog.passphrase
+        session_token = login_dialog.session_token
+
+        # Read encrypted credentials from config.ini
+        config = ConfigParser()
+        config.read("config.ini")
+
+        encrypted_api_key = config.get("Credentials", "api_key")
+        encrypted_api_secret = config.get("Credentials", "api_secret")
+
+        # Decrypt the credentials using the user-provided passphrase
+        api_key = decrypt_data(encrypted_api_key, user_passphrase).decode()
+        api_secret = decrypt_data(encrypted_api_secret, user_passphrase).decode()
+
+        # Start the main trading platform
+        window = TradingPlatform(api_key, api_secret, session_token)
+        window.show()
+        sys.exit(app.exec())
